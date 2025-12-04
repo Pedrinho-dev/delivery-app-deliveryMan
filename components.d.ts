@@ -11,7 +11,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     MapRoute: typeof import('./src/components/MapRoute.vue')['default']
     OrdersModal: typeof import('./src/components/OrdersModal.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

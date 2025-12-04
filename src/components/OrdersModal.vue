@@ -1,9 +1,5 @@
 <template>
-  <v-dialog
-    :model-value="show"
-    @update:model-value="emit('update:show', $event)"
-    max-width="600px"
-  >
+  <v-dialog :model-value="show" @update:model-value="emit('update:show', $event)" max-width="600px">
     <v-card>
       <v-card-title>
         Pedido #{{ order._id }}
@@ -12,11 +8,10 @@
       <v-card-text>
         <h3>Cliente</h3>
         <p><b>Nome:</b> {{ order.idClient?.name }}</p>
-        <p><b>Telefone:</b> {{ order.idClient?.phone || order.idClient?.phoneNumber || "—" }}</p>
 
         <h3 class="mt-3">Localização</h3>
-        <p><b>Cliente:</b> {{ clientCoordsText }}</p>
-        <p><b>Destino final:</b> {{ destCoordsText }}</p>
+        <p><b>Client:</b> {{ order.clientLoc }}</p>
+        <p><b>Destino final:</b> {{ order.destinyLoc }}</p>
 
         <v-divider class="my-3" />
 
@@ -27,11 +22,7 @@
 
         <h3>Rota no Mapa</h3>
 
-        <MapRoute
-          v-if="originObj && destObj"
-          :origin="originObj"
-          :destination="destObj"
-        />
+        <MapRoute v-if="originObj && destObj" :origin="originObj" :destination="destObj" />
       </v-card-text>
 
       <v-card-actions class="d-flex justify-end">
@@ -120,5 +111,4 @@ function accept() {
 }
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

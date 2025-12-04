@@ -11,7 +11,7 @@
         class="order-card"
         @click="openModal(order)"
       >
-        <h2 class="order-title">Pedido #{{ order._id }}</h2>
+        <h2 class="order-title">Pedido {{ order.destinyLoc }}</h2>
         <p class="order-client">Cliente: {{ order.idClient?.name || "—" }}</p>
       </div>
     </div>
