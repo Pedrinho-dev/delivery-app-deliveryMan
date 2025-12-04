@@ -5,34 +5,31 @@
     <span class="subtitle">Choose your next race</span>
 
     <div class="orders-wrapper">
-      <div
-        v-for="order in orders"
-        :key="order._id"
-        class="order-card"
-        @click="openModal(order)"
-      >
+      <div v-for="order in orders" :key="order._id" class="order-card" @click="openModal(order)">
         <h2 class="order-title">Pedido {{ order.destinyLoc }}</h2>
         <p class="order-client">Cliente: {{ order.idClient?.name || "—" }}</p>
       </div>
     </div>
 
-    <OrdersModal
-      v-if="selectedOrder"
-      :order="selectedOrder"
-      v-model:show="showModal"
-      @accept="acceptOrder"
-    />
+    <OrdersModal v-if="selectedOrder" :order="selectedOrder" v-model:show="showModal" @accept="acceptOrder" />
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { getPendingOrders } from "../services/api.js";
 import OrdersModal from "../components/OrdersModal.vue";
+import { loadGoogleMaps } from "../composables/useGoogleMaps.js";
+import { useOrderStore } from "../stores/orderStore.js";
+
+const router = useRouter();
+const orderStore = useOrderStore();
 
 const orders = ref([]);
 const selectedOrder = ref(null);
 const showModal = ref(false);
+let pollingInterval = null;
 
 async function loadOrders() {
   try {
@@ -43,8 +40,26 @@ async function loadOrders() {
   }
 }
 
+function startPolling() {
+  pollingInterval = setInterval(() => {
+    loadOrders();
+  }, 1000);
+}
+
+function stopPolling() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+}
+
 onMounted(() => {
   loadOrders();
+  startPolling();
+});
+
+onUnmounted(() => {
+  stopPolling();
 });
 
 function openModal(order) {
@@ -52,31 +67,96 @@ function openModal(order) {
   showModal.value = true;
 }
 
+function getCurrentLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocalização não suportada"));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      },
+      (error) => reject(error),
+      { enableHighAccuracy: true }
+    );
+  });
+}
+
+async function getAddressFromCoordinates(lat, lng) {
+  try {
+    const gm = await loadGoogleMaps();
+    const geocoder = new gm.Geocoder();
+    const latlng = { lat, lng };
+
+    return new Promise((resolve, reject) => {
+      geocoder.geocode({ location: latlng }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          const fullAddress = results[0].formatted_address;
+          resolve(fullAddress);
+        } else {
+          reject(new Error("Não foi possível obter o endereço"));
+        }
+      });
+    });
+  } catch (err) {
+    console.error("Erro ao buscar endereço:", err);
+    return `${lat}, ${lng}`;
+  }
+}
+
 async function acceptOrder() {
   try {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:3000/order/${selectedOrder.value._id}`, {
+    // Obter localização atual do motorista
+    const location = await getCurrentLocation();
+
+    // Converter coordenadas em endereço
+    const locDeliveryMan = await getAddressFromCoordinates(location.lat, location.lng);
+
+    const response = await fetch(`http://localhost:3000/order/${selectedOrder.value._id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify({ accept: true }),
+      body: JSON.stringify({
+        accept: true,
+        locDeliveryMan: locDeliveryMan
+      }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Erro do servidor:", errorData);
+      throw new Error("Erro ao aceitar pedido");
+    }
+
+    const updatedOrder = await response.json();
+    console.log("Pedido atualizado:", updatedOrder);
+
+    // Salvar o pedido na store
+    orderStore.setCurrentOrder(updatedOrder);
 
     showModal.value = false;
     selectedOrder.value = null;
-    await loadOrders();
+
+    // Redirecionar para a página de buscar pedido (motorista -> cliente)
+    router.push("/PickupOrder");
 
   } catch (err) {
     console.error("Erro ao aceitar pedido:", err);
+    alert("Erro ao obter localização ou aceitar pedido. Verifique as permissões de localização.");
   }
 }
 </script>
 
 <style scoped>
-/* Fundo da tela */
 .container {
   min-height: 100vh;
   padding-top: 30px;
@@ -85,7 +165,6 @@ async function acceptOrder() {
   color: white !important;
 }
 
-/* Títulos */
 .title {
   color: white;
   font-size: 32px;
@@ -98,14 +177,12 @@ async function acceptOrder() {
   margin-bottom: 20px;
 }
 
-/* Wrapper das orders */
 .orders-wrapper {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-/* Cada pedido */
 .order-card {
   border: 2px solid rgba(255, 255, 255, 0.35);
   padding: 16px;
@@ -121,7 +198,6 @@ async function acceptOrder() {
   transform: scale(1.02);
 }
 
-/* Textos cada card */
 .order-title {
   margin: 0;
   color: white;

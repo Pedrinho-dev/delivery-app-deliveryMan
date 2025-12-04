@@ -1,21 +1,14 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
+import router from './router'
+import vuetify from './plugins/vuetify'
 
-import router from './router'   // <-- Router
+const app = createApp(App)
+const pinia = createPinia()
 
-// ----- Vuetify -----
-import 'vuetify/styles'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+app.use(pinia)
+app.use(router)
+app.use(vuetify)
 
-const vuetify = createVuetify({
-  components,
-  directives
-})
-// --------------------
-
-createApp(App)
-  .use(router)    // <-- coloque primeiro ou depois, tanto faz
-  .use(vuetify)   // <-- também precisa estar aqui!
-  .mount('#app')
+app.mount('#app')
