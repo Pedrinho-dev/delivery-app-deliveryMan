@@ -147,7 +147,7 @@ async function acceptOrder() {
     }
 
     const response = await fetch(
-      `http://localhost:3000/order/${selectedOrder.value._id}`,
+      `https://delivery-app-api-pi.vercel.app/order/${selectedOrder.value._id}`,
       {
         method: "PUT",
         headers: {

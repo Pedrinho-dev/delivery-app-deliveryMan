@@ -21,7 +21,7 @@ export const useOrderStore = defineStore("order", {
           "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MjIyYTY5YmQyYzk5ZGNhY2MzM2YyZCIsImlhdCI6MTc2NDg4NjQwNywiZXhwIjoxNzY0ODkzNjA3fQ.n0JWG2V3xjAwMvUmEzT_CHI41AvMiAPMwMe4DSSQei8";
         const token = userToken;
 
-        const response = await fetch(`http://localhost:3000/order/${orderId}`, {
+        const response = await fetch(`https://delivery-app-api-pi.vercel.app/order/${orderId}`, {
           headers: {
             Authorization: token,
           },
