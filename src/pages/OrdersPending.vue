@@ -1,17 +1,28 @@
 <template>
   <v-container class="container">
-
     <h1 class="title">Available Orders</h1>
     <span class="subtitle">Choose your next race</span>
 
     <div class="orders-wrapper">
-      <div v-for="order in orders" :key="order._id" class="order-card" @click="openModal(order)">
-        <h2 class="order-title">Pedido {{ order.destinyLoc }}</h2>
+      <div
+        v-for="order in orders"
+        :key="order._id"
+        class="order-card"
+        @click="openModal(order)"
+      >
+        <h2 class="order-title">
+          Pedido {{ order.destinyLoc || "(Sem destino)" }}
+        </h2>
         <p class="order-client">Cliente: {{ order.idClient?.name || "—" }}</p>
       </div>
     </div>
 
-    <OrdersModal v-if="selectedOrder" :order="selectedOrder" v-model:show="showModal" @accept="acceptOrder" />
+    <OrdersModal
+      v-if="selectedOrder"
+      :order="selectedOrder"
+      v-model:show="showModal"
+      @accept="acceptOrder"
+    />
   </v-container>
 </template>
 
@@ -78,7 +89,7 @@ function getCurrentLocation() {
       (position) => {
         resolve({
           lat: position.coords.latitude,
-          lng: position.coords.longitude
+          lng: position.coords.longitude,
         });
       },
       (error) => reject(error),
@@ -111,25 +122,44 @@ async function getAddressFromCoordinates(lat, lng) {
 
 async function acceptOrder() {
   try {
-    const token = localStorage.getItem("token");
+    const userToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MjIyYTY5YmQyYzk5ZGNhY2MzM2YyZCIsImlhdCI6MTc2NDg4NjQwNywiZXhwIjoxNzY0ODkzNjA3fQ.n0JWG2V3xjAwMvUmEzT_CHI41AvMiAPMwMe4DSSQei8";
+    const token = userToken;
 
-    // Obter localização atual do motorista
-    const location = await getCurrentLocation();
+    if (!token) {
+      console.warn("Nenhum token encontrado. A requisição pode falhar.");
+    }
 
-    // Converter coordenadas em endereço
-    const locDeliveryMan = await getAddressFromCoordinates(location.lat, location.lng);
+    let locDeliveryMan = "Localização desconhecida";
 
-    const response = await fetch(`http://localhost:3000/order/${selectedOrder.value._id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify({
-        accept: true,
-        locDeliveryMan: locDeliveryMan
-      }),
-    });
+    // Tentar obter localização atual do motorista, mas não impedir o fluxo se falhar
+    try {
+      const location = await getCurrentLocation();
+      locDeliveryMan = await getAddressFromCoordinates(
+        location.lat,
+        location.lng
+      );
+    } catch (geoErr) {
+      console.warn(
+        "Não foi possível obter a localização do motorista:",
+        geoErr
+      );
+    }
+
+    const response = await fetch(
+      `http://localhost:3000/order/${selectedOrder.value._id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          accept: true,
+          locDeliveryMan: locDeliveryMan,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -148,10 +178,9 @@ async function acceptOrder() {
 
     // Redirecionar para a página de buscar pedido (motorista -> cliente)
     router.push("/PickupOrder");
-
   } catch (err) {
     console.error("Erro ao aceitar pedido:", err);
-    alert("Erro ao obter localização ou aceitar pedido. Verifique as permissões de localização.");
+    alert("Erro ao aceitar pedido. Tente novamente.");
   }
 }
 </script>
@@ -161,7 +190,11 @@ async function acceptOrder() {
   min-height: 100vh;
   padding-top: 30px;
   background: #14149c;
-  background: linear-gradient(90deg, rgba(20, 20, 156, 1) 0%, rgba(25, 25, 77, 1) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(20, 20, 156, 1) 0%,
+    rgba(25, 25, 77, 1) 100%
+  );
   color: white !important;
 }
 

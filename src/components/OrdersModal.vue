@@ -1,17 +1,22 @@
 <template>
-  <v-dialog :model-value="show" @update:model-value="emit('update:show', $event)" max-width="600px">
+  <v-dialog
+    :model-value="show"
+    @update:model-value="emit('update:show', $event)"
+    max-width="600px"
+  >
     <v-card>
-      <v-card-title>
-        Pedido #{{ order._id }}
-      </v-card-title>
+      <v-card-title> Pedido #{{ order._id }} </v-card-title>
 
       <v-card-text>
         <h3>Cliente</h3>
         <p><b>Nome:</b> {{ order.idClient?.name }}</p>
 
         <h3 class="mt-3">Localização</h3>
-        <p><b>Client:</b> {{ order.clientLoc }}</p>
-        <p><b>Destino final:</b> {{ order.destinyLoc }}</p>
+        <p><b>Client:</b> {{ order.clientLoc || "Endereço não informado" }}</p>
+        <p>
+          <b>Destino final:</b>
+          {{ order.destinyLoc || "Endereço não informado" }}
+        </p>
 
         <v-divider class="my-3" />
 
@@ -22,14 +27,22 @@
 
         <h3>Rota no Mapa</h3>
 
-        <MapRoute v-if="originObj && destObj" :origin="originObj" :destination="destObj" />
+        <MapRoute
+          v-if="originObj && destObj"
+          :origin="originObj"
+          :destination="destObj"
+        />
+        <div v-else class="text-center text-grey my-4">
+          Mapa indisponível (endereços faltando)
+        </div>
       </v-card-text>
 
       <v-card-actions class="d-flex justify-end">
         <v-btn color="primary" @click="accept">Aceitar</v-btn>
-        <v-btn color="secondary" @click="emit('update:show', false)">Fechar</v-btn>
+        <v-btn color="secondary" @click="emit('update:show', false)"
+          >Fechar</v-btn
+        >
       </v-card-actions>
-
     </v-card>
   </v-dialog>
 </template>
@@ -63,14 +76,48 @@ function parseCoords(str) {
   return null;
 }
 
+async function getCoordinatesFromAddress(address) {
+  try {
+    const gm = await loadGoogleMaps();
+    const geocoder = new gm.Geocoder();
+
+    return new Promise((resolve, reject) => {
+      geocoder.geocode({ address: address }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          const location = results[0].geometry.location;
+          resolve({
+            lat: location.lat(),
+            lng: location.lng(),
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  } catch (err) {
+    console.error("Erro ao buscar coordenadas:", err);
+    return null;
+  }
+}
+
 async function calculateDistance() {
-  const clientLoc = parseCoords(props.order.clientLoc);
-  const destLoc = parseCoords(props.order.destinyLoc);
+  let clientLoc = parseCoords(props.order.clientLoc);
+  if (!clientLoc && props.order.clientLoc) {
+    clientLoc = await getCoordinatesFromAddress(props.order.clientLoc);
+  }
 
-  originObj.value = clientLoc;
-  destObj.value = destLoc;
+  let destLoc = parseCoords(props.order.destinyLoc);
+  if (!destLoc && props.order.destinyLoc) {
+    destLoc = await getCoordinatesFromAddress(props.order.destinyLoc);
+  }
 
-  clientCoordsText.value = clientLoc ? `${clientLoc.lat}, ${clientLoc.lng}` : "—";
+  // Atualizar refs apenas se tiver dados válidos
+  if (clientLoc) originObj.value = clientLoc;
+  if (destLoc) destObj.value = destLoc;
+
+  clientCoordsText.value = clientLoc
+    ? `${clientLoc.lat}, ${clientLoc.lng}`
+    : "—";
   destCoordsText.value = destLoc ? `${destLoc.lat}, ${destLoc.lng}` : "—";
 
   if (!clientLoc || !destLoc) {
@@ -89,8 +136,7 @@ async function calculateDistance() {
         travelMode: "DRIVING",
       },
       (res) => {
-        distance.value =
-          res?.rows?.[0]?.elements?.[0]?.distance?.text || "N/A";
+        distance.value = res?.rows?.[0]?.elements?.[0]?.distance?.text || "N/A";
       }
     );
   } catch (err) {

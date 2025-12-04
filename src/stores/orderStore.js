@@ -1,22 +1,26 @@
-import { defineStore } from 'pinia'
+import { defineStore } from "pinia";
 
-export const useOrderStore = defineStore('order', {
+export const useOrderStore = defineStore("order", {
   state: () => ({
     currentOrder: null,
   }),
 
   actions: {
     setCurrentOrder(order) {
-      this.currentOrder = order
+      this.currentOrder = order;
     },
 
     clearCurrentOrder() {
-      this.currentOrder = null
+      this.currentOrder = null;
     },
 
     async fetchOrder(orderId) {
       try {
-        const token = localStorage.getItem("token");
+        // TODO: Adicione um token válido aqui se não houver login no app
+        const userToken =
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MjIyYTY5YmQyYzk5ZGNhY2MzM2YyZCIsImlhdCI6MTc2NDg4NjQwNywiZXhwIjoxNzY0ODkzNjA3fQ.n0JWG2V3xjAwMvUmEzT_CHI41AvMiAPMwMe4DSSQei8";
+        const token = userToken;
+
         const response = await fetch(`http://localhost:3000/order/${orderId}`, {
           headers: {
             Authorization: token,
@@ -37,7 +41,11 @@ export const useOrderStore = defineStore('order', {
 
     async updateOrderFinalLoc(orderId) {
       try {
-        const token = localStorage.getItem("token");
+        // TODO: Adicione um token válido aqui se não houver login no app
+        const userToken =
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MjIyYTY5YmQyYzk5ZGNhY2MzM2YyZCIsImlhdCI6MTc2NDg4NjQwNywiZXhwIjoxNzY0ODkzNjA3fQ.n0JWG2V3xjAwMvUmEzT_CHI41AvMiAPMwMe4DSSQei8";
+        const token = userToken;
+
         const response = await fetch(`http://localhost:3000/order/${orderId}`, {
           method: "PUT",
           headers: {
@@ -45,7 +53,7 @@ export const useOrderStore = defineStore('order', {
             Authorization: token,
           },
           body: JSON.stringify({
-            finalLoc: true
+            finalLoc: true,
           }),
         });
 
@@ -60,7 +68,7 @@ export const useOrderStore = defineStore('order', {
         console.error("Erro ao atualizar pedido:", err);
         throw err;
       }
-    }
+    },
   },
 
   getters: {
@@ -69,6 +77,6 @@ export const useOrderStore = defineStore('order', {
       if (!state.currentOrder) return "—";
       if (!state.currentOrder.finalLoc) return "Indo buscar o pedido";
       return "A caminho do destino final";
-    }
-  }
-})
+    },
+  },
+});
